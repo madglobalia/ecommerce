@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -24,5 +25,14 @@ export async function POST(req: Request) {
     uniqueId,
   });
 
-  return NextResponse.json({ user: { name: user.name, email: user.email, uniqueId: user.uniqueId } });
+  const token = jwt.sign(
+    { userId: user._id, uniqueId: user.uniqueId },
+    process.env.JWT_SECRET || "your-secret-key",
+    { expiresIn: "7d" }
+  );
+
+  return NextResponse.json({
+    token,
+    user: { _id: user._id.toString(), name: user.name, email: user.email, uniqueId: user.uniqueId },
+  });
 }

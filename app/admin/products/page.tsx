@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ProductForm from "@/components/admin/ProductForm";
 import ProductTable from "@/components/admin/ProductTable";
+import Pagination from "@/components/admin/Pagination";
 import { showToast } from "@/components/Toast";
 
 interface Product {
@@ -21,9 +22,30 @@ export default function AdminProducts() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Pagination calculations
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const paginatedProducts = products.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   useEffect(() => {
-    fetchProducts();
+    const controller = new AbortController();
+
+    fetch("/api/products", { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => setProducts(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          console.error(err);
+          showToast("Failed to fetch products", "error");
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   const fetchProducts = async () => {
@@ -90,6 +112,7 @@ export default function AdminProducts() {
         );
         setIsFormOpen(false);
         setEditingProduct(null);
+        setCurrentPage(1);
         fetchProducts();
       } else {
         showToast("Failed to save product", "error");
@@ -115,6 +138,10 @@ export default function AdminProducts() {
 
       if (res.ok) {
         showToast("Product deleted successfully", "success");
+        // If last item on page, go back one page
+        if (paginatedProducts.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
         fetchProducts();
       } else {
         showToast("Failed to delete product", "error");
@@ -156,9 +183,17 @@ export default function AdminProducts() {
         )}
 
         <ProductTable
-          products={products}
+          products={paginatedProducts}
           onEdit={handleEdit}
           onDelete={handleDelete}
+        />
+
+        <Pagination
+          currentPage={currentPage}
+          totalItems={products.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          label="products"
         />
       </div>
     </AdminLayout>

@@ -6,6 +6,12 @@ if (!MONGODB_URI) {
   throw new Error("MongoDB URI missing");
 }
 
+// Import all models here to ensure they are always registered
+import "@/models/User";
+import "@/models/Product";
+import "@/models/Order";
+import "@/models/Review";
+
 let cached = (global as any).mongoose || { conn: null, promise: null };
 
 export async function connectDB() {

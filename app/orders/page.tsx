@@ -19,18 +19,27 @@ export default function OrdersPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (!user) {
-      router.push("/auth/login");
+    const userData = localStorage.getItem("currentUser");
+    if (!userData) {
+      router.push("/login");
       return;
     }
-
+    const user = JSON.parse(userData);
+    if (!user._id) {
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("userToken");
+      router.push("/login");
+      return;
+    }
     fetchOrders();
   }, []);
 
   const fetchOrders = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const userData = localStorage.getItem("currentUser");
+      if (!userData) return;
+      const user = JSON.parse(userData);
+      if (!user._id) return;
       const res = await fetch(`/api/orders?clientId=${user._id}`);
       const data = await res.json();
       setOrders(data);
@@ -112,7 +121,7 @@ export default function OrdersPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-xl font-bold text-indigo-600">
-                      ${order.totalAmount}
+                      ₹{order.totalAmount}
                     </p>
                   </div>
                 </div>

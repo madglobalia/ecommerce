@@ -150,14 +150,28 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading }: 
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Category
           </label>
-          <input
-            type="text"
+          <select
             name="category"
             value={formData.category}
-            onChange={handleInputChange}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, category: e.target.value }))
+            }
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-          />
+          >
+            <option value="">-- Select Category --</option>
+            <option value="Electronics">📱 Electronics</option>
+            <option value="Clothing">👗 Clothing</option>
+            <option value="Footwear">👟 Footwear</option>
+            <option value="Computers">💻 Computers</option>
+            <option value="Furniture">🛋️ Furniture</option>
+            <option value="Kitchen">🍳 Kitchen</option>
+            <option value="Beauty">💄 Beauty</option>
+            <option value="Sports">⚽ Sports</option>
+            <option value="Accessories">⌚ Accessories</option>
+            <option value="Home Appliances">🏠 Home Appliances</option>
+            <option value="Tools">🔧 Tools</option>
+          </select>
         </div>
 
         <div>

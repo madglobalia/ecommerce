@@ -19,7 +19,7 @@ export default function RegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -37,32 +37,33 @@ export default function RegisterPage() {
       return;
     }
 
-    // Get existing users from localStorage
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    
-    // Check if email already exists
-    const existingUser = users.find((u: any) => u.email === formData.email);
-    if (existingUser) {
-      setError("Email already registered");
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Save user and token to localStorage
+        localStorage.setItem("currentUser", JSON.stringify(data.user));
+        localStorage.setItem("userToken", data.token);
+        window.dispatchEvent(new Event("custom-login"));
+        router.push("/");
+      } else {
+        setError(data.error || "Registration failed");
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Create new user
-    const newUser = {
-      id: Date.now().toString(),
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-    };
-
-    // Save user to localStorage
-    localStorage.setItem("users", JSON.stringify([...users, newUser]));
-
-    // Set current user
-    localStorage.setItem("currentUser", JSON.stringify(newUser));
-
-    router.push("/login");
   };
 
   return (

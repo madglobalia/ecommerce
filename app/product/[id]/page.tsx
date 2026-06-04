@@ -31,7 +31,7 @@ export default async function ProductDetails({
         <p className="mt-5">{product.description}</p>
 
         <p className="text-2xl mt-5">
-          ${product.price}
+          ₹{product.price}
         </p>
 
         <button className="bg-black text-white px-6 py-3 mt-5">

@@ -8,18 +8,25 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    const controller = new AbortController();
 
-  const fetchStats = async () => {
-    try {
-      const res = await fetch("/api/admin/dashboard");
-      const data = await res.json();
-      setStats(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/admin/dashboard", {
+          signal: controller.signal,
+        });
+        const text = await res.text();
+        if (!text) return;
+        const data = JSON.parse(text);
+        setStats(data);
+      } catch (err: any) {
+        if (err.name !== "AbortError") console.error("Dashboard fetch error:", err);
+      }
+    };
+
+    fetchStats();
+    return () => controller.abort();
+  }, []);
 
   if (!stats) {
     return (
@@ -57,7 +64,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-gray-500 text-sm">Total Revenue</h3>
-                <p className="text-3xl font-bold text-gray-900">${stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-gray-900">₹{stats.totalRevenue.toFixed(2)}</p>
               </div>
               <div className="text-4xl">💰</div>
             </div>
@@ -73,44 +80,70 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link
-            href="/admin/products"
-            className="bg-blue-600 text-white p-6 rounded-lg shadow-md hover:bg-blue-700 transition"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="text-3xl">📦</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-green-50 p-6 rounded-lg shadow-md border border-green-200">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold">Manage Products</h3>
-                <p className="text-sm text-blue-100">Add, edit, delete products</p>
+                <h3 className="text-green-600 text-sm font-semibold">Completed Orders</h3>
+                <p className="text-3xl font-bold text-green-700">{stats.completedOrders || 0}</p>
               </div>
+              <div className="text-4xl">✅</div>
             </div>
-          </Link>
-          <Link
-            href="/admin/orders"
-            className="bg-green-600 text-white p-6 rounded-lg shadow-md hover:bg-green-700 transition"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="text-3xl">📋</div>
+          </div>
+          <div className="bg-red-50 p-6 rounded-lg shadow-md border border-red-200">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold">Manage Orders</h3>
-                <p className="text-sm text-green-100">View and update orders</p>
+                <h3 className="text-red-600 text-sm font-semibold">Cancelled Orders</h3>
+                <p className="text-3xl font-bold text-red-700">{stats.cancelledOrders || 0}</p>
               </div>
+              <div className="text-4xl">❌</div>
             </div>
-          </Link>
-          <Link
-            href="/admin/clients"
-            className="bg-purple-600 text-white p-6 rounded-lg shadow-md hover:bg-purple-700 transition"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="text-3xl">👥</div>
-              <div>
-                <h3 className="text-xl font-bold">Manage Clients</h3>
-                <p className="text-sm text-purple-100">View registered clients</p>
-              </div>
-            </div>
-          </Link>
+          </div>
         </div>
+
+        {/* Return requests alert */}
+        {stats.pendingReturns > 0 && (
+          <Link href="/admin/returns">
+            <div className="bg-orange-50 border border-orange-300 rounded-lg p-5 flex items-center justify-between cursor-pointer hover:bg-orange-100 transition">
+              <div className="flex items-center gap-4">
+                <span className="text-3xl">↩️</span>
+                <div>
+                  <p className="font-bold text-orange-800 text-lg">
+                    {stats.pendingReturns} Pending Return Request{stats.pendingReturns > 1 ? "s" : ""}
+                  </p>
+                  <p className="text-orange-600 text-sm">Click to review and respond</p>
+                </div>
+              </div>
+              <span className="text-orange-600 font-bold">View →</span>
+            </div>
+          </Link>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-orange-50 p-6 rounded-lg shadow-md border border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-orange-600 text-sm font-semibold">Returned Orders</h3>
+                <p className="text-3xl font-bold text-orange-700">{stats.returnedOrders || 0}</p>
+                <p className="text-xs text-orange-500 mt-1">Deducted from revenue</p>
+              </div>
+              <div className="text-4xl">↩️</div>
+            </div>
+          </div>
+          <div className="bg-blue-50 p-6 rounded-lg shadow-md border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-blue-600 text-sm font-semibold">Pending Returns</h3>
+                <p className="text-3xl font-bold text-blue-700">{stats.pendingReturns || 0}</p>
+                <p className="text-xs text-blue-500 mt-1">Awaiting review</p>
+              </div>
+              <div className="text-4xl">⏳</div>
+            </div>
+          </div>
+        </div>
+
+
+
       </div>
     </AdminLayout>
   );
