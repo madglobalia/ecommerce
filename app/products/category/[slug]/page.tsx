@@ -63,9 +63,7 @@ export default function CategoryPage() {
     if (!slug) return;
     setCurrentPage(1);
     setLoading(true);
-
     const controller = new AbortController();
-
     fetch(`/api/products?category=${encodeURIComponent(categoryName)}`, {
       signal: controller.signal,
     })
@@ -77,13 +75,9 @@ export default function CategoryPage() {
       })
       .then((data) => setProducts(data))
       .catch((err) => {
-        if (err.name !== "AbortError") {
-          console.error("Category fetch error:", err);
-          setProducts([]);
-        }
+        if (err.name !== "AbortError") { console.error(err); setProducts([]); }
       })
       .finally(() => setLoading(false));
-
     return () => controller.abort();
   }, [slug]);
 

@@ -29,7 +29,7 @@ const OrderSchema = new Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["COD", "UPI"],
+      enum: ["COD", "UPI", "STRIPE"],
       default: "COD",
     },
     totalAmount: { type: Number, required: true },
@@ -40,6 +40,7 @@ const OrderSchema = new Schema(
     deliveryOTP: { type: String },
     otpExpiresAt: { type: Date },
     otpVerified: { type: Boolean, default: false },
+    stripeSessionId: { type: String, default: null },
     returnRequest: { type: ReturnRequestSchema, default: undefined },
   },
   { timestamps: true }

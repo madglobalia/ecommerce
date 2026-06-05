@@ -281,9 +281,7 @@ export default function MyOrdersPage() {
       router.push("/login");
       return;
     }
-
     const controller = new AbortController();
-
     fetch(`/api/orders?clientId=${user._id}`, {
       cache: "no-store",
       signal: controller.signal,
@@ -292,7 +290,6 @@ export default function MyOrdersPage() {
       .then((data) => setOrders(Array.isArray(data) ? data : []))
       .catch((err) => { if (err.name !== "AbortError") console.error(err); })
       .finally(() => setLoading(false));
-
     return () => controller.abort();
   }, [router]);
 
@@ -408,7 +405,8 @@ export default function MyOrdersPage() {
                   <div>
                     <p className="text-xs text-gray-500 uppercase font-medium">Payment</p>
                     <p className="text-sm font-semibold text-gray-700">
-                      {order.paymentMethod === "COD" ? "💵 COD" : "📱 UPI"}
+                      {order.paymentMethod === "COD" ? "💵 COD" :
+                       order.paymentMethod === "UPI" ? "📱 UPI" : "💳 Card"}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyle(order.status)}`}>

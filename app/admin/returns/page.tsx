@@ -47,16 +47,11 @@ export default function AdminReturnsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-
-    fetch("/api/admin/returns", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
+    fetch("/api/admin/returns", { cache: "no-store", signal: controller.signal })
       .then((r) => r.json())
       .then((data) => setReturns(Array.isArray(data) ? data : []))
       .catch((err) => { if (err.name !== "AbortError") console.error(err); })
       .finally(() => setLoading(false));
-
     return () => controller.abort();
   }, []);
 

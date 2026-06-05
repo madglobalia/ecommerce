@@ -17,7 +17,6 @@ export default function AdminClients() {
 
   useEffect(() => {
     const controller = new AbortController();
-
     fetch("/api/admin/users", { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => setUsers(Array.isArray(data) ? data : []))
@@ -27,7 +26,6 @@ export default function AdminClients() {
           showToast("Failed to fetch clients", "error");
         }
       });
-
     return () => controller.abort();
   }, []);
 

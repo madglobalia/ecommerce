@@ -56,7 +56,6 @@ export default function AdminOrders() {
     };
 
     load();
-
     const interval = setInterval(load, 15000);
     return () => {
       controller.abort();
@@ -215,6 +214,8 @@ export default function AdminOrders() {
                         ? "💵 COD"
                         : order.paymentMethod === "UPI"
                         ? "📱 UPI"
+                        : order.paymentMethod === "STRIPE"
+                        ? "💳 Card"
                         : "—"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

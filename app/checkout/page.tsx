@@ -9,7 +9,7 @@ export default function CheckoutPage() {
   const { cart, clearCart } = useCartStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [selectedPayment, setSelectedPayment] = useState<"COD" | "UPI">("COD");
+  const [selectedPayment, setSelectedPayment] = useState<"COD" | "UPI" | "STRIPE">("COD");
   const [upiId, setUpiId] = useState("");
   const [shippingDetails, setShippingDetails] = useState({
     fullName: "",
@@ -19,30 +19,24 @@ export default function CheckoutPage() {
     zipCode: "",
   });
 
-  // useRef to always have latest paymentMethod value in handleSubmit
-  const paymentRef = useRef<"COD" | "UPI">("COD");
+  const paymentRef = useRef<"COD" | "UPI" | "STRIPE">("COD");
 
-  const selectPayment = (method: "COD" | "UPI") => {
+  const selectPayment = (method: "COD" | "UPI" | "STRIPE") => {
     setSelectedPayment(method);
     paymentRef.current = method;
-    if (method === "COD") setUpiId("");
+    if (method !== "UPI") setUpiId("");
   };
 
   useEffect(() => {
     const userData = localStorage.getItem("currentUser");
-    if (!userData) {
-      router.push("/login");
-      return;
-    }
+    if (!userData) { router.push("/login"); return; }
     const user = JSON.parse(userData);
     setCurrentUser(user);
     setShippingDetails((prev) => ({ ...prev, fullName: user.name || "" }));
-  }, []); // only run once on mount
+  }, []);
 
   useEffect(() => {
-    if (cart.length === 0 && currentUser) {
-      router.push("/products");
-    }
+    if (cart.length === 0 && currentUser) router.push("/products");
   }, [cart, currentUser, router]);
 
   const getTotalPrice = () =>
@@ -53,10 +47,29 @@ export default function CheckoutPage() {
     setShippingDetails((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Place orders in DB (for COD and UPI)
+  const placeOrders = async (clientId: string, method: string) => {
+    for (const product of cart) {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product._id,
+          clientId,
+          quantity: product.quantity || 1,
+          paymentMethod: method,
+          phone: shippingDetails.phone,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to place order for ${product.title}`);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Use ref value — guaranteed to be latest
     const method = paymentRef.current;
 
     if (method === "UPI" && !upiId.trim()) {
@@ -68,14 +81,9 @@ export default function CheckoutPage() {
 
     try {
       const userData = localStorage.getItem("currentUser");
-      if (!userData) {
-        router.push("/login");
-        return;
-      }
-
+      if (!userData) { router.push("/login"); return; }
       const user = JSON.parse(userData);
       const clientId = user._id;
-
       if (!clientId) {
         alert("Session expired. Please login again.");
         localStorage.removeItem("currentUser");
@@ -83,27 +91,34 @@ export default function CheckoutPage() {
         return;
       }
 
-      for (const product of cart) {
-        const response = await fetch("/api/orders", {
+      // ── Stripe Payment ──────────────────────────────
+      if (method === "STRIPE") {
+        const res = await fetch("/api/stripe/create-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            productId: product._id,
+            cart,
             clientId,
-            quantity: product.quantity || 1,
-            paymentMethod: method,
-            phone: shippingDetails.phone,
+            clientName: user.name,
+            clientEmail: user.email,
           }),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to place order for ${product.title}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to create payment session");
+
+        // Redirect to Stripe Checkout
+        if (data.url) {
+          window.location.href = data.url;
+          return;
         }
       }
 
+      // ── COD / UPI ───────────────────────────────────
+      await placeOrders(clientId, method);
       clearCart();
       router.push("/checkout/success");
+
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Failed to place order");
@@ -234,14 +249,9 @@ export default function CheckoutPage() {
                 <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer mb-3 transition ${
                   selectedPayment === "COD" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
                 }`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="COD"
-                    checked={selectedPayment === "COD"}
-                    onChange={() => selectPayment("COD")}
-                    className="w-4 h-4 accent-indigo-600"
-                  />
+                  <input type="radio" name="paymentMethod" value="COD"
+                    checked={selectedPayment === "COD"} onChange={() => selectPayment("COD")}
+                    className="w-4 h-4 accent-indigo-600" />
                   <span className="text-2xl">💵</span>
                   <div>
                     <p className="font-semibold text-gray-800">Cash on Delivery</p>
@@ -251,17 +261,12 @@ export default function CheckoutPage() {
                 </label>
 
                 {/* UPI option */}
-                <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition ${
+                <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer mb-3 transition ${
                   selectedPayment === "UPI" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
                 }`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="UPI"
-                    checked={selectedPayment === "UPI"}
-                    onChange={() => selectPayment("UPI")}
-                    className="w-4 h-4 accent-indigo-600"
-                  />
+                  <input type="radio" name="paymentMethod" value="UPI"
+                    checked={selectedPayment === "UPI"} onChange={() => selectPayment("UPI")}
+                    className="w-4 h-4 accent-indigo-600" />
                   <span className="text-2xl">📱</span>
                   <div>
                     <p className="font-semibold text-gray-800">UPI Payment</p>
@@ -271,13 +276,36 @@ export default function CheckoutPage() {
                 </label>
 
                 {selectedPayment === "UPI" && (
-                  <div className="mt-3">
+                  <div className="mt-3 mb-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">UPI ID</label>
-                    <input
-                      type="text" value={upiId} onChange={(e) => setUpiId(e.target.value)}
+                    <input type="text" value={upiId} onChange={(e) => setUpiId(e.target.value)}
                       placeholder="e.g. yourname@upi"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                )}
+
+                {/* Stripe option */}
+                <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition ${
+                  selectedPayment === "STRIPE" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
+                }`}>
+                  <input type="radio" name="paymentMethod" value="STRIPE"
+                    checked={selectedPayment === "STRIPE"} onChange={() => selectPayment("STRIPE")}
+                    className="w-4 h-4 accent-indigo-600" />
+                  <span className="text-2xl">💳</span>
+                  <div>
+                    <p className="font-semibold text-gray-800">Credit / Debit Card</p>
+                    <p className="text-xs text-gray-500">Secure payment via Stripe</p>
+                  </div>
+                  <div className="ml-auto flex items-center gap-1">
+                    {selectedPayment === "STRIPE" && <span className="text-indigo-600 font-bold text-sm mr-2">✓</span>}
+                    <span className="text-xs bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded">CARD</span>
+                  </div>
+                </label>
+
+                {selectedPayment === "STRIPE" && (
+                  <div className="mt-3 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-indigo-700 flex items-center gap-2">
+                    <span>🔒</span>
+                    <p>You will be redirected to Stripe's secure checkout page to complete payment.</p>
                   </div>
                 )}
               </div>
@@ -287,7 +315,8 @@ export default function CheckoutPage() {
                 <div>
                   <p className="text-sm text-gray-500">Payment via</p>
                   <p className="font-bold text-gray-800">
-                    {selectedPayment === "COD" ? "💵 Cash on Delivery" : "📱 UPI"}
+                    {selectedPayment === "COD" ? "💵 Cash on Delivery" :
+                     selectedPayment === "UPI" ? "📱 UPI" : "💳 Credit / Debit Card"}
                   </p>
                 </div>
                 <div className="text-right">
@@ -301,7 +330,11 @@ export default function CheckoutPage() {
                 disabled={isProcessing}
                 className="w-full bg-green-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isProcessing ? "Processing..." : `Place Order — ₹${getTotalPrice().toFixed(2)}`}
+                {isProcessing
+                  ? "Processing..."
+                  : selectedPayment === "STRIPE"
+                  ? `Pay ₹${getTotalPrice().toFixed(2)} with Card →`
+                  : `Place Order — ₹${getTotalPrice().toFixed(2)}`}
               </button>
             </form>
           </div>

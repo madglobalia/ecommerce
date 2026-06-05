@@ -34,7 +34,6 @@ export default function AdminProducts() {
 
   useEffect(() => {
     const controller = new AbortController();
-
     fetch("/api/products", { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => setProducts(Array.isArray(data) ? data : []))
@@ -44,7 +43,6 @@ export default function AdminProducts() {
           showToast("Failed to fetch products", "error");
         }
       });
-
     return () => controller.abort();
   }, []);
 
@@ -52,7 +50,7 @@ export default function AdminProducts() {
     try {
       const res = await fetch("/api/products");
       const data = await res.json();
-      setProducts(data);
+      setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
       showToast("Failed to fetch products", "error");

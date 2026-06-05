@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: false, // Disable double-invoke in development
+  reactStrictMode: false,
 };
 
 export default nextConfig;

@@ -9,24 +9,22 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const controller = new AbortController();
-
-    const fetchStats = async () => {
-      try {
-        const res = await fetch("/api/admin/dashboard", {
-          signal: controller.signal,
-        });
-        const text = await res.text();
-        if (!text) return;
-        const data = JSON.parse(text);
-        setStats(data);
-      } catch (err: any) {
-        if (err.name !== "AbortError") console.error("Dashboard fetch error:", err);
-      }
-    };
-
-    fetchStats();
+    fetch("/api/admin/dashboard", { signal: controller.signal })
+      .then((r) => r.text())
+      .then((text) => { if (text) setStats(JSON.parse(text)); })
+      .catch((err) => { if (err.name !== "AbortError") console.error("Dashboard error:", err); });
     return () => controller.abort();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/admin/dashboard");
+      const text = await res.text();
+      if (text) setStats(JSON.parse(text));
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+    }
+  };
 
   if (!stats) {
     return (
