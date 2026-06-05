@@ -11,7 +11,14 @@ export default function AdminDashboard() {
     const controller = new AbortController();
     fetch("/api/admin/dashboard", { signal: controller.signal })
       .then((r) => r.text())
-      .then((text) => { if (text) setStats(JSON.parse(text)); })
+      .then((text) => {
+        if (!text || !text.trim()) return;
+        try {
+          setStats(JSON.parse(text));
+        } catch (e) {
+          console.error("Dashboard JSON parse error:", e);
+        }
+      })
       .catch((err) => { if (err.name !== "AbortError") console.error("Dashboard error:", err); });
     return () => controller.abort();
   }, []);
@@ -20,7 +27,12 @@ export default function AdminDashboard() {
     try {
       const res = await fetch("/api/admin/dashboard");
       const text = await res.text();
-      if (text) setStats(JSON.parse(text));
+      if (!text || !text.trim()) return;
+      try {
+        setStats(JSON.parse(text));
+      } catch (e) {
+        console.error("Dashboard JSON parse error:", e);
+      }
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     }
@@ -98,24 +110,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Return requests alert */}
-        {stats.pendingReturns > 0 && (
-          <Link href="/admin/returns">
-            <div className="bg-orange-50 border border-orange-300 rounded-lg p-5 flex items-center justify-between cursor-pointer hover:bg-orange-100 transition">
-              <div className="flex items-center gap-4">
-                <span className="text-3xl">↩️</span>
-                <div>
-                  <p className="font-bold text-orange-800 text-lg">
-                    {stats.pendingReturns} Pending Return Request{stats.pendingReturns > 1 ? "s" : ""}
-                  </p>
-                  <p className="text-orange-600 text-sm">Click to review and respond</p>
-                </div>
-              </div>
-              <span className="text-orange-600 font-bold">View →</span>
-            </div>
-          </Link>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-orange-50 p-6 rounded-lg shadow-md border border-orange-200">

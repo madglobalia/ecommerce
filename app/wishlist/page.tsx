@@ -1,14 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useCartStore } from "@/store/cartStore";
+import Pagination from "@/components/Pagination";
+
+const ITEMS_PER_PAGE = 8;
 
 export default function WishlistPage() {
   const { wishlist, removeFromWishlist } = useWishlistStore();
   const { addToCart, isInCart } = useCartStore();
   const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(1);
 
   const isLoggedIn = () => !!localStorage.getItem("currentUser");
 
@@ -22,6 +27,11 @@ export default function WishlistPage() {
     addToCart(product);
     router.push("/checkout");
   };
+
+  const paginatedWishlist = wishlist.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -51,8 +61,9 @@ export default function WishlistPage() {
             </Link>
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {wishlist.map((product) => (
+            {paginatedWishlist.map((product) => (
               <div
                 key={product._id}
                 className="bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-xl hover:border-pink-200 transition-all duration-300 flex flex-col overflow-hidden"
@@ -143,6 +154,23 @@ export default function WishlistPage() {
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {wishlist.length > ITEMS_PER_PAGE && (
+            <div className="mt-8">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={wishlist.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                label="wishlist items"
+              />
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

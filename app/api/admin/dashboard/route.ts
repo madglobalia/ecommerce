@@ -12,7 +12,7 @@ export async function GET() {
     const [totalOrders, totalClients, orders] = await Promise.all([
       Order.countDocuments(),
       User.countDocuments(),
-      Order.find({}, { status: 1, quantity: 1, totalAmount: 1, "returnRequest.status": 1 }).lean(),
+      Order.find({}, { status: 1, quantity: 1, totalAmount: 1, "returnRequest.status": 1, "returnRequest.requested": 1 }).lean(),
     ]);
 
     const productsSold = orders.reduce((sum: number, o: any) => sum + (o.quantity || 0), 0);

@@ -27,7 +27,12 @@ export default function Header() {
 
   const checkUser = () => {
     const user = localStorage.getItem("currentUser");
-    setCurrentUser(user ? JSON.parse(user) : null);
+    try {
+      setCurrentUser(user ? JSON.parse(user) : null);
+    } catch {
+      setCurrentUser(null);
+      localStorage.removeItem("currentUser");
+    }
   };
 
   useEffect(() => {

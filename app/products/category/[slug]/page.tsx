@@ -69,9 +69,13 @@ export default function CategoryPage() {
     })
       .then(async (r) => {
         const text = await r.text();
-        if (!text) return [];
-        const data = JSON.parse(text);
-        return Array.isArray(data) ? data : [];
+        if (!text || !text.trim()) return [];
+        try {
+          const data = JSON.parse(text);
+          return Array.isArray(data) ? data : [];
+        } catch {
+          return [];
+        }
       })
       .then((data) => setProducts(data))
       .catch((err) => {

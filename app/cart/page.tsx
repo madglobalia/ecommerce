@@ -1,12 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import Link from "next/link";
+import Pagination from "@/components/Pagination";
+
+const ITEMS_PER_PAGE = 5;
 
 export default function CartPage() {
   const { cart, removeFromCart, clearCart, updateQuantity } = useCartStore();
   const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(1);
 
   const getTotalPrice = () =>
     cart.reduce((total, item) => total + item.price * item.quantity, 0);
@@ -20,6 +25,11 @@ export default function CartPage() {
     router.push("/checkout");
   };
 
+  const paginatedCart = cart.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
@@ -27,6 +37,11 @@ export default function CartPage() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-gray-800">
             Shopping Cart 🛒
+            {cart.length > 0 && (
+              <span className="ml-3 text-lg text-gray-400 font-normal">
+                ({cart.length} item{cart.length !== 1 ? "s" : ""})
+              </span>
+            )}
           </h1>
           {cart.length > 0 && (
             <button
@@ -55,7 +70,7 @@ export default function CartPage() {
 
             {/* Cart items */}
             <div className="lg:col-span-2 space-y-4">
-              {cart.map((product) => {
+              {paginatedCart.map((product) => {
                 const maxQty = Math.min(20, product.stock || 20);
                 return (
                   <div
@@ -122,7 +137,15 @@ export default function CartPage() {
 
                     {/* Remove */}
                     <button
-                      onClick={() => removeFromCart(product._id)}
+                      onClick={() => {
+                        removeFromCart(product._id);
+                        // If last item on current page removed, go to previous page
+                        const newTotal = cart.length - 1;
+                        const maxPage = Math.ceil(newTotal / ITEMS_PER_PAGE);
+                        if (currentPage > maxPage && maxPage > 0) {
+                          setCurrentPage(maxPage);
+                        }
+                      }}
                       className="flex-shrink-0 bg-red-100 text-red-600 hover:bg-red-200 w-9 h-9 rounded-lg flex items-center justify-center transition text-lg"
                       title="Remove"
                     >
@@ -131,6 +154,22 @@ export default function CartPage() {
                   </div>
                 );
               })}
+
+              {/* Pagination */}
+              {cart.length > ITEMS_PER_PAGE && (
+                <div className="pt-2">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={cart.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={(page) => {
+                      setCurrentPage(page);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    label="cart items"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Order summary */}

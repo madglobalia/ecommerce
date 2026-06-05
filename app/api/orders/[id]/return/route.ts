@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
+import Revenue from "@/models/Revenue";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
@@ -137,6 +138,20 @@ export async function PUT(
       { _id: new mongoose.Types.ObjectId(id) },
       { $set: updateFields }
     );
+
+    // If return accepted → deduct from revenue
+    if (action === "accept") {
+      await Revenue.findOneAndUpdate(
+        {},
+        {
+          $inc: {
+            totalRevenue: -order.totalAmount,
+            completedOrders: -1,
+          },
+        },
+        { sort: { createdAt: -1 } }
+      );
+    }
 
     const updated = await Order.findById(id)
       .populate("productId")
