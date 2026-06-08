@@ -35,7 +35,7 @@ export default function AddProduct() {
           setForm({ ...form, price: e.target.value })
         }
       />
-
+      
       <button
         onClick={handleSubmit}
         className="bg-black text-white px-5 py-2"

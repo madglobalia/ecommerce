@@ -5,6 +5,7 @@ import User from "@/models/User";
 import Revenue from "@/models/Revenue";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+import { sendOrderConfirmationEmail } from "@/lib/resend";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,28 @@ export async function POST(req: Request) {
     const populatedOrder = await Order.findById(order._id)
       .populate("productId")
       .populate("clientId");
+
+    // Send order confirmation email (non-blocking)
+    const client = await User.findById(clientId);
+    if (client?.email && populatedOrder) {
+      const estimatedDeliveryStr = estimatedDelivery.toLocaleDateString("en-IN", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      sendOrderConfirmationEmail({
+        toEmail: client.email,
+        clientName: client.name || "Customer",
+        orderId: order._id.toString(),
+        productTitle: (populatedOrder.productId as any)?.title || "Product",
+        productImage: (populatedOrder.productId as any)?.image || undefined,
+        quantity,
+        totalAmount,
+        paymentMethod,
+        estimatedDelivery: estimatedDeliveryStr,
+      });
+    }
 
     return NextResponse.json(populatedOrder);
   } catch (error) {

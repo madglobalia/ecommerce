@@ -63,6 +63,7 @@ export default function Pagination({
           disabled={currentPage === 1}
           className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
         >
+
           ← Prev
         </button>
 
@@ -86,7 +87,7 @@ export default function Pagination({
             </button>
           )
         )}
-
+              
         {/* Next */}
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}

@@ -4,7 +4,7 @@ import Product from "@/models/Product";
 import User from "@/models/User";
 import Revenue from "@/models/Revenue";
 import { NextResponse } from "next/server";
-import twilio from "twilio";
+import { sendDeliveryOtpEmail } from "@/lib/resend";
 
 export const dynamic = "force-dynamic";
 
@@ -115,33 +115,25 @@ export async function PUT(
         await revenue.save();
       }
 
-      // Get order details for SMS
-      const existingOrder = await Order.findById(id).populate("clientId");
-      if (existingOrder && existingOrder.phone) {
-        // Always show OTP in console for testing
-        console.log(`📱 DELIVERY OTP for ${existingOrder.phone}: ${otp} (Valid for 30 minutes)`);
+      // Get order details and send OTP via email
+      const existingOrder = await Order.findById(id).populate("clientId").populate("productId");
+      if (existingOrder) {
+        const client = existingOrder.clientId as any;
+        const product = existingOrder.productId as any;
 
-        // Send SMS using Twilio if credentials are configured
-        if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
-          try {
-            const client = twilio(
-              process.env.TWILIO_ACCOUNT_SID,
-              process.env.TWILIO_AUTH_TOKEN
-            );
+        console.log(`📧 DELIVERY OTP for order ${id}: ${otp} (Valid for 30 minutes)`);
 
-            await client.messages.create({
-              body: `Your delivery OTP is ${otp}. Valid for 30 minutes.`,
-              from: process.env.TWILIO_PHONE_NUMBER,
-              to: existingOrder.phone,
-            });
-
-            console.log(`✅ SMS sent successfully to ${existingOrder.phone}`);
-          } catch (smsError) {
-            console.error("❌ Failed to send SMS:", smsError);
-            console.log("⚠️ OTP is available in console for testing");
-          }
+        // Send OTP via email using Resend
+        if (client?.email) {
+          await sendDeliveryOtpEmail({
+            toEmail: client.email,
+            clientName: client.name || "Customer",
+            orderId: id,
+            productTitle: product?.title || "Your Product",
+            otp,
+          });
         } else {
-          console.log("⚠️ Twilio credentials not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to .env file");
+          console.log("⚠️ No client email found for OTP delivery");
         }
       }
     }
@@ -176,7 +168,7 @@ export async function DELETE(
     await connectDB();
     const { id } = await context.params;
     const order = await Order.findByIdAndDelete(id);
-    return NextResponse.json(order);
+    return NextResponse.json(order);                                                                                             
   } catch (error) {
     console.error("Order delete error:", error);
     return NextResponse.json(

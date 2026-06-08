@@ -179,7 +179,7 @@ export default function AdminProducts() {
             isLoading={isLoading}
           />
         )}
-
+          
         <ProductTable
           products={paginatedProducts}
           onEdit={handleEdit}
